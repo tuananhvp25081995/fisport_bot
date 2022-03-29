@@ -261,89 +261,6 @@ let setEmailWaitingVerify = async ({ telegramID }, isWaitingVerify) => {
     }
 };
 
-let setWaitingEnterEmail = async ({ telegramID }, isWaitingEnterEmail) => {
-    try {
-        let user = await UserModel
-            .findOne({
-                telegramID,
-            })
-            .exec();
-        if (user) {
-            user.registerFollow.step3.isWaitingEnterEmail = isWaitingEnterEmail;
-            await user.save();
-            return true;
-        } else return false;
-    } catch (e) {
-        console.error(e);
-        return false;
-    }
-};
-
-let setEmailAndUpdate = async ({ telegramID, email }) => {
-    console.log(curentTime(), "setEmailAndUpdate", telegramID, email);
-
-    try {
-        let user = await UserModel.findOne({ telegramID })
-
-        let checkUsed = await UserModel.findOne({
-            "mail.email": email,
-            "mail.isVerify": true,
-        })
-
-
-        if (checkUsed) {
-            return {
-                result: false,
-                error: "used",
-            };
-        }
-
-        if (user) {
-            user.mail.email = email.toString().toLowerCase();
-            user.mail.isVerify = false;
-            user.mail.verifyCode = v4().toString().slice(0, 8);
-            user.registerFollow.log === "step3";
-            user.registerFollow.step3.isWaitingEnterEmail = false;
-            user.registerFollow.step3.isWaitingVerify = true;
-            user.registerFollow.passAll = false;
-            await user.save();
-            return {
-                result: true,
-                verifyCode: user.mail.verifyCode,
-            };
-        } else return false;
-    } catch (e) {
-        console.error("error in setEmailAndUpdate", e);
-        return false;
-    }
-};
-
-let removeEmailandUpdate = async ({ telegramID }) => {
-    console.log(curentTime(), "resetEmailandUpdate", telegramID);
-
-    try {
-        let user = await UserModel
-            .findOne({
-                telegramID,
-            })
-            .exec();
-        if (user) {
-            user.mail.isVerify = false;
-            user.mail.email = "";
-            user.mail.isVerify = false;
-            user.mail.verifyCode = "";
-            user.registerFollow.log === "step3";
-            user.registerFollow.step3.isWaitingEnterEmail = true;
-            user.registerFollow.step3.isWaitingVerify = false;
-            await user.save();
-            return true;
-        } else return false;
-    } catch (e) {
-        console.error(e);
-        return false;
-    }
-};
-
 let handleNewUserJoinGroup = async ({ telegramID, fullName }, campaign) => {
     try {
         let user = await UserModel.findOne({ telegramID }).exec();
@@ -352,7 +269,6 @@ let handleNewUserJoinGroup = async ({ telegramID, fullName }, campaign) => {
             return null;
         } else {
             user.registerFollow.step2.isJoinGrouped = true;
-            user.campaign1 = true;
         }
         await user.save();
         return user;
@@ -397,7 +313,7 @@ let handleNewUserJoinChannel = async ({ telegramID, fullName }) => {
             user.registerFollow.step3.isJoinChanneled = true;
             if (user.registerFollow.log === "step2") {
                 user.registerFollow.log = "step3";
-                user.registerFollow.step4.isWaitingEnterEmail = true;
+                user.registerFollow.step4.isWaitingPass = true;
             }
         }
         await user.save();
@@ -467,11 +383,8 @@ module.exports = {
     handleNewUserNoRef,
     handleNewUserWithRef,
     setEmailWaitingVerify,
-    setWaitingEnterEmail,
     handleNewUserJoinGroup,
     handleNewUserJoinChannel,
-    setEmailAndUpdate,
-    removeEmailandUpdate,
     handleUserWebhook,
     handleNewUserJoinampaign,
 };
