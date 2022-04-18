@@ -62,7 +62,7 @@ let BOT_STEP_1 = "🍓 Step 1: Join Naga Kingdom Telegram Group by clicking this
 let BOT_STEP_2 = "🍓 Step 2: Join Naga Kingdom Telegram Channel by clicking this:\n"
 let BOT_STEP_3 = `Step 3:
 🌹 Follow and Tweet our Channel [Twitter](https://twitter.com/NagaKingdom)
-🌹 And retweet our [Campaign](https://twitter.com/NagaKingdom/status/1472904659815698432?s=20) on Twitter
+🌹 And retweet our [Campaign](https://twitter.com/NagaKingdom/status/1509752368585269255) on Twitter (with hashtag #NagaMusk)
 🌹 Then enter your twitter profile link:`
 let BOT_STEP_4 = `✨ You have successfully completed all steps to gain the rewards.
 The rewards will be sent directly to your wallet once the campaign ends.
@@ -74,24 +74,16 @@ let inviteTemple = `
 🔊🔊 Naga Musk Limited Experience Event Airdrop
 ⏰ Time (UTC): 01 - 10 April, 2022
 🔖 Start now: URL\n
-🎁 Total Rewards: $100,000
-🎟 5,000 Arena tickets for 5,000 random wallet addresses (worth of $50,000)
-(Arena Mode: Win a maximum of 70% total reward pool per game; $10 entry fee; total pool reaches $100,000; earn up to $70,000)
+🎁 Airdrop rewards will be distributed randomly to 1000 lucky wallet addresses on 20 April, 2022.
 
-🎟 5,000 tickets for Top 500 Referrals (worth of $50,000)
-   🏅 1st place: 1000 tickets ($10,000)
-   🏅 2nd place: 500 tickets ($5,000)
-   🏅 3rd place: 300 tickets ($3,000)
-   🏅 4th place:  200 tickets ($2,000)
-   🏅 5th place: 100 tickets ($1,000)
-   🏅 6th - 10th place: 50 tickets ($500) 
-   🏅 11th - 20th place: 30 tickets ($300) 
-   🏅 21st - 50th place: 20 tickets ($200)
-   🏅 51st - 100th place: 13 tickets ($130)
-   🏅 101st - 200th place: 5 tickets ($50)
-   🏅 201st - 500th place: 2 tickets ($20)
+🎁 Referral Rewards (Top 100 Referrals):
+    🏅 1st place: $1000 tickets
+    🏅 2nd place: $500 tickets
+    🏅 3rd place: $300 tickets
+    🏅 4th - 10th place:  $100 tickets
+    🏅 11th - 50th place: $50 tickets
+    🏅 51st - 100th place: $20 tickets
 `
-
 
 let BOT_EVENT_END = `Hello our value user.\nThe number of participants in the finfine ecosystem launch event has reached the limit, you cannot participate in this airdrop. We thank you for contacting us.\nPlease keep in touch, we will inform you of the latest airdrop.`
 let emailDomainAllow = ["aol.com", "gmail.com", "hotmail.com", "hotmail.co.uk", "live.com", "yahoo.com", "yahoo.co.uk", "yandex.com", "hotmail.it"];
@@ -222,7 +214,9 @@ bot.on("message", async (...parameters) => {
             if (text.startsWith("/start")) {
                 const url = 'images/banner.png';
                 await bot.sendPhoto(telegramID, url);
-                await bot.sendMessage(telegramID, BOT_WELCOM_AFTER_START.replace("USERNAME", `[${fullName}](tg://user?id=${telegramID})`),{ parse_mode: "Markdown" }).catch(e => { console.log("error in first start!", e) })
+                await bot.sendMessage(telegramID, BOT_WELCOM_AFTER_START.replace("USERNAME", `[${fullName}](tg://user?id=${telegramID})`).replace("NAGAKINGDOM",`[Naga Kingdom](https://naga.gg/)`)
+                    .replace("COINMARKETCAP",`[CoinmarketCap](https://coinmarketcap.com/currencies/naga-kingdom/)`).replace("RAYDIUM",`[Raydium](https://raydium.io/)`),
+                    { parse_mode: "Markdown" }).catch(e => { console.log("error in first start!", e) })
                 //handle for new user without ref invite
                 if (msg.text === "/start") {
                     return handleStart(bot, msg, null);
@@ -236,6 +230,10 @@ bot.on("message", async (...parameters) => {
             }
             if (msg.text === "Check Join Channel" && !user.registerFollow.passAll) {
                 return handleJoinChannel(bot, msg);
+            }
+
+            if (msg.text === "Check Join Channel" && !user.registerFollow.passAll && !user.registerFollow.step2.isJoinGrouped) {
+                return await sendStep1({ telegramID }, bot);
             }
 
             if (!user) {
@@ -422,9 +420,12 @@ async function sendStep4_Finish({ telegramID, msg }) {
 }
 
 async function sendStep1({ telegramID }, bot) {
-    bot.sendMessage(telegramID, BOT_STEP_1 + group_invite_link, {
-        reply_markup: reply_markup_keyboard_checks
-    });
+    bot.sendMessage(telegramID, BOT_STEP_1 + group_invite_link);
+    setTimeout(() => {
+        return bot.sendMessage(telegramID, `Please click "Check Join Group" to continue`, {
+            reply_markup: reply_markup_keyboard_checks
+        })
+    },1000)
     return;
 }
 
@@ -434,7 +435,7 @@ async function sendStep2_1({ telegramID }, bot) {
         return bot.sendMessage(telegramID, `Please click "Check Join Channel" to continue`, {
             reply_markup: reply_markup_keyboard_check
         })
-    },3000)
+    },1000)
     return;
 }
 
@@ -475,11 +476,27 @@ async function handleStart(bot, msg, ref) {
         await sendStep1({ telegramID }, bot);
         return;
     }
+    if (!user && getChatMember.status === "left") {
+        await sendStep1({ telegramID }, bot);
+        return;
+    }
+
+    if (user && getChatMember.status === "left") {
+        await sendStep1({ telegramID }, bot);
+        return;
+    }
     if (!user && getChatMember.status === "member") {
         await handleNewUserJoinGroup({ telegramID, fullName });
         await sendStep2_1({ telegramID }, bot);
         return;
     }
+
+    if(user && getChatMember.status === "member") {
+        await handleNewUserJoinGroup({ telegramID, fullName });
+        await sendStep2_1({ telegramID }, bot);
+        return;
+    }
+
     if (user && getChatMember.status === "member"&& user.registerFollow.step2.isJoinGrouped && !user.registerFollow.step3.isJoinChanneled) {
         await handleNewUserJoinGroup({ telegramID, fullName });
         await sendStep2_1({ telegramID }, bot);

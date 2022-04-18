@@ -48,37 +48,35 @@ const schemaDashboard = new Schema(
         bot_text: {
             BOT_WELCOM_AFTER_START: {
                 type: String,
-                default: `Welcome USERNAME - Limited Experience Event in Naga Kingdom!
-Please follow up to get started in the campaign
+                default: `🎉 🎉 Welcome USERNAME - Limited Experience Event in Naga Kingdom!
+
+⬇️ Please perform the tasks below to receive $10 Arena tickets
+
+About Naga Kingdom:
+    - NAGAKINGDOM is the top game built and developed on Solana Blockchain.
+    - Naga Kingdom is now on COINMARKETCAP and RAYDIUM.
 ————————————————————————
-🎁 Rewards: $100,000 
-    🎟 5,000 Arena tickets for 5,000 random wallet addresses (worth of $50,000)
-    <i>(Arena Mode: Win a maximum of 70% total reward pool per game; $10 entry fee; total pool reaches $100,000; earn up to $70,000)</i>
 
-    🎟 5,000 tickets for Top 500 Referrals (worth of $50,000)
-       🏅 1st place: 1000 tickets ($10,000)
-       🏅 2nd place: 500 tickets ($5,000)
-       🏅 3rd place: 300 tickets ($3,000)
-       🏅 4th place:  200 tickets ($2,000)
-       🏅 5th place: 100 tickets ($1,000)
-       🏅 6th  10th place: 50 tickets ($500) 
-       🏅 11th  20th place: 30 tickets ($300) 
-       🏅 21st - 50th place: 20 tickets ($200)
-       🏅 51st - 100th place: 13 tickets ($130)
-       🏅 101st - 200th place: 5 tickets ($50)
-       🏅 201st - 500th place: 2 tickets ($20)
+🎁 Airdrop rewards will be distributed randomly to 1000 lucky wallet addresses on 20 April, 2022.
 
-CONDITIONS OF PARTICIPATION (Required Tasks)
+🎁 Referral Rewards (Top 100 Referrals):
+    🏅 1st place: $1000 tickets
+    🏅 2nd place: $500 tickets
+    🏅 3rd place: $300 tickets
+    🏅 4th - 10th place:  $100 tickets
+    🏅 11th - 50th place: $50 tickets
+    🏅 51st - 100th place: $20 tickets
+
+⬇️ Please perform the following tasks (required):
+
 ✅ Step 1: Join Naga Kingdom Telegram Group
 ✅ Step 2: Join Naga Kingdom Telegram Channel
 ✅ Step 3: Follow & Retweet Naga Kingdom’s pinned tweet on Twitter (with hashtag #NagaMusk)
 ✅ Step 4: Enter Solana Address (create at Solflare, Trust, coin98, Exodus)
 —————————————————————-
-Note: Winners are required to register to experience Naga Kingdom with Naga Musk NFT (Registration for the Limited Experience Event opens from 14:00 - 16:00 UTC, 10 - 16 April, 2022).
+⚡️ Note: Winners are required to register to experience Naga Kingdom with Naga Musk NFT (Registration for the Limited Experience Event opens from 14:00 - 16:00 UTC, 10 - 16 April, 2022).
 
 Thanks for joining!
-
-To join our campaign, click '/start'
 `
             },
             BOT_DESCRIPTION: {
