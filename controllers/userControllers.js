@@ -1,6 +1,4 @@
 const mongoose = require("mongoose");
-let { v4 } = require("uuid");
-let DashboardModel = mongoose.model("DashboardModel")
 let UserModel = mongoose.model("UserModel")
 let moment = require("moment");
 
@@ -25,8 +23,7 @@ let handleNewUserNoRef = async (data) => {
                 user: userCheck,
             };
             return toReturn;
-        } 
-        else {
+        } else {
             let newUser = new UserModel();
             newUser.telegramID = telegramID;
             newUser.fullName = fullName;
@@ -157,92 +154,6 @@ let checkAndUpdateRefId = async (data) => {
     } else return null;
 };
 
-let isJoinedGroup = async ({ telegramID }) => {
-    let user = await UserModel
-        .findOne({
-            telegramID,
-        })
-        .exec();
-    if (!user || !user.registerFollow.step2.isJoined) {
-        return false;
-    } else return true;
-};
-
-let getStatstics = async ({ telegramID }) => {
-    let toReturn = {
-        result: true,
-    };
-    try {
-        let user = await UserModel
-            .findOne({
-                telegramID,
-            })
-            .exec();
-        if (user) {
-            let listInviteSuccessCount = await UserModel
-                .find({
-                    refTelegramID: user.telegramID,
-                    "registerFollow.passAll": true,
-                    "webminarLog.isEnough30min": true,
-                })
-                .countDocuments()
-                .exec();
-
-            toReturn.FTTTotal = 0;
-            if (user.registerFollow.passAll && user.webminarLog.isEnough30min) {
-                toReturn.FTTTotal = 15;
-                toReturn.FTTTotal =
-                    toReturn.FTTTotal + listInviteSuccessCount * 3;
-            } else {
-                toReturn.FTTTotal = 0;
-            }
-            toReturn.inviteTotal = user.inviteLogs.length;
-            toReturn.ETKREF = 15 + (toReturn.inviteTotal * 3);
-            toReturn.inviteGetGiftSuccess = listInviteSuccessCount;
-            toReturn.totalTime = user.webminarLog.totalTime;
-            return toReturn;
-        } else {
-            console.error(
-                "getStatstics not found user telegramID" + telegramID
-            );
-            // throw "no user for this id: " +telegramID
-            return {
-                result: false,
-            };
-        }
-    } catch (e) {
-        console.error(
-            "getStatstics have error with telegramID" + telegramID,
-            e
-        );
-        return {
-            result: false,
-        };
-    }
-};
-
-let isHaveMailAndVerified = async (data) => {
-    let { telegramID } = data;
-    let user = await UserModel
-        .findOne({
-            telegramID,
-        })
-        .exec();
-    if (user) {
-        let toReturn = {
-            email: true,
-            isVerify: true,
-        };
-        if (user.mail.email === "") toReturn.email = false;
-        if (!user.mail.isVerify) toReturn.isVerify = false;
-        return toReturn;
-    }
-    return {
-        email: false,
-        isVerify: false,
-    };
-};
-
 let setEmailWaitingVerify = async ({ telegramID }, isWaitingVerify) => {
     try {
         let user = await UserModel
@@ -269,52 +180,6 @@ let handleNewUserJoinGroup = async ({ telegramID, fullName }, campaign) => {
             return null;
         } else {
             user.registerFollow.step2.isJoinGrouped = true;
-        }
-        await user.save();
-        return user;
-    } catch (e) {
-        console.error(e);
-        return null;
-    }
-};
-
-let handleNewUserJoinampaign= async (bot, msg, campaign) => {
-    try {
-        let telegramID = msg.from.id;
-        let user = await UserModel.findOne({ telegramID }).exec();
-        if (!user) {
-            console.log(curentTime(7), fullName, telegramID, "not found in db");
-            return null;
-        } else {
-            switch (campaign) {
-                case 2:
-                    user.campaign2 = true;
-                    break
-                case 3:
-                    user.campaign3 = true;
-                    break
-            }
-        }
-        await user.save();
-        return user;
-    } catch (e) {
-        console.error(e);
-        return null;
-    }
-};
-
-let handleNewUserJoinChannel = async ({ telegramID, fullName }) => {
-    try {
-        let user = await UserModel.findOne({ telegramID }).exec();
-        if (!user) {
-            console.log(curentTime(7), fullName, telegramID, "not found in db");
-            return null;
-        } else {
-            user.registerFollow.step3.isJoinChanneled = true;
-            if (user.registerFollow.log === "step2") {
-                user.registerFollow.log = "step3";
-                user.registerFollow.step4.isWaitingPass = true;
-            }
         }
         await user.save();
         return user;
@@ -378,13 +243,9 @@ let handleUserWebhook = async ({ id, event }) => {
 };
 
 module.exports = {
-    isHaveMailAndVerified,
-    isJoinedGroup,
     handleNewUserNoRef,
     handleNewUserWithRef,
     setEmailWaitingVerify,
     handleNewUserJoinGroup,
-    handleNewUserJoinChannel,
     handleUserWebhook,
-    handleNewUserJoinampaign,
 };
