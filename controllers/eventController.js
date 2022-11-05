@@ -3,7 +3,7 @@ const BigNumber = require('bignumber.js');
 const contract_address = process.env.CONTRACT_ADDRESS
 const { Contract, providers } =  require('ethers');
 const abiContract = require('../config/abi').AbiContract
-var provider = new providers.JsonRpcProvider("https://data-seed-prebsc-1-s1.binance.org:8545/");
+var provider = new providers.JsonRpcProvider(process.env.PROVIDER);
 var contract = new Contract(contract_address, abiContract, provider);
 
 contract.on('SWAP', (who, season, team, i, o, buy, timestamp) => {

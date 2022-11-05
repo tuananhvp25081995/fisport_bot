@@ -4,16 +4,15 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 let moment = require("moment");
-let passport = require("passport");
 let mongoose = require("mongoose")
 let LocalStrategy = require("passport-local").Strategy;
 var cookieSession = require("cookie-session");
 var sparkles = require("sparkles")();
 const chalk = require("chalk");
 
-require("./js/Models/dashboard")
-require("./js/Models/users")
-require("./js/datebase").connect();
+require("./databases/Models/dashboard")
+require("./databases/Models/users")
+require("./databases/datebase").connect();
 
 
 let indexRouter = require("./routes/index");

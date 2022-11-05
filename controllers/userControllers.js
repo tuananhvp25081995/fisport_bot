@@ -7,7 +7,7 @@ function curentTime(offset = 7) {
 }
 
 let handleNewUserNoRef = async (data) => {
-    let { telegramID, fullName } = data;
+    let { telegramID, fullName, wallet } = data;
 
     try {
         let userCheck = await UserModel
@@ -26,10 +26,10 @@ let handleNewUserNoRef = async (data) => {
         } else {
             let newUser = new UserModel();
             newUser.telegramID = telegramID;
+            newUser.wallet = wallet
             newUser.fullName = fullName;
             newUser.joinDate = Date.now();
             newUser.updateAt = Date.now();
-            newUser.telegramID = telegramID;
             let result = await newUser.save();
             let toReturn = {
                 result: true,
@@ -52,106 +52,6 @@ let handleNewUserNoRef = async (data) => {
         };
         return toReturn;
     }
-};
-
-let handleNewUserWithRef = async (data) => {
-    let { telegramID, fullName, ref } = data;
-
-    try {
-        let userCheck = await UserModel
-            .findOne({
-                telegramID,
-            })
-            .exec();
-
-        if (userCheck) {
-            console.log(
-                curentTime(),
-                userCheck.telegramID,
-                fullName,
-                "user was joined to chat group before"
-            );
-
-            //check ref ID and update if it exist
-            if (userCheck.refTelegramID === "") {
-                userCheck.refTelegramID = await checkAndUpdateRefId(data);
-            }
-
-            //update fullName
-            userCheck.fullName = fullName;
-            await userCheck.save();
-            let toReturn = {
-                result: true,
-                isNewUser: false,
-                user: userCheck,
-            };
-            return toReturn;
-        } else {
-            let newUser = new UserModel({
-                telegramID,
-                fullName,
-                refTelegramID: await checkAndUpdateRefId(data),
-                joinDate: Date.now(),
-                updateAt: Date.now(),
-            });
-
-            let result = await newUser.save();
-
-            let toReturn = {
-                result: true,
-                isNewUser: true,
-                user: result,
-            };
-            console.log(
-                curentTime(),
-                telegramID,
-                fullName,
-                "user joined to chat group"
-            );
-            return toReturn;
-        }
-    } catch (e) {
-        console.log(
-            curentTime(),
-            telegramID,
-            fullName,
-            "has error when handle"
-        );
-        console.error(e);
-        let toReturn = {
-            result: false,
-        };
-        return toReturn;
-    }
-};
-
-let checkAndUpdateRefId = async (data) => {
-    let { telegramID, ref } = data;
-    let refUser = await UserModel
-        .findOne({
-            telegramID: ref,
-        })
-        .exec();
-
-    //refId exist, update inviteLogs of refId
-    if (refUser) {
-        let check = true;
-        for (let i = 0; i < refUser.inviteLogs; i++) {
-            if (refUser.inviteLogs[i].telegramID === telegramID) {
-                check = false;
-                break;
-            }
-        }
-        if (check)
-            refUser.inviteLogs.push({
-                telegramID,
-                timestamp: Date.now(),
-            });
-
-        await refUser.save();
-
-        return ref.toString();
-    } else return null;
 };
 
 let setEmailWaitingVerify = async ({ telegramID }, isWaitingVerify) => {
@@ -244,7 +144,6 @@ let handleUserWebhook = async ({ id, event }) => {
 
 module.exports = {
     handleNewUserNoRef,
-    handleNewUserWithRef,
     setEmailWaitingVerify,
     handleNewUserJoinGroup,
     handleUserWebhook,

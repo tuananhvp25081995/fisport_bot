@@ -11,7 +11,6 @@ const axios = require("axios").default;
 
 let {
     handleNewUserNoRef,
-    handleNewUserWithRef,
 } = require("./controllers/userControllers");
 
 let bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true, });
@@ -127,16 +126,12 @@ bot.on("message", async (...parameters) => {
             if (text.startsWith("/start") || text.startsWith("Start")) {
                 await bot.sendMessage(telegramID, BOT_WELCOM_AFTER_START.replace("USERNAME", `[${fullName}](tg://user?id=${telegramID})`),
                     { parse_mode: "Markdown" }).catch(e => { console.log("error in first start!", e) })
-                //handle for new user without ref invite
-                if (msg.text === "/start" || msg.text == "Start") {
-                    return handleStart(bot, msg, null);
-                }
-                //handle with ref invite
                 let id = text.slice(7);
-                console.log("id", id)
                 if (!id) {
                     return handleStart(bot, msg, null);
-                } else return handleStart(bot, msg, id.toString());
+                } else  {
+                    return handleStart(bot, msg, id.toString());   
+                }
             }
             
 
@@ -262,8 +257,6 @@ async function sendInfoUser({ telegramID }, bot, text, user) {
         .then(async function (response) {
             if (response.data.success) {
                 user.registerFollow.step2.checkInfo = false;
-                user.wallet = text;
-                await user.save();
                 return bot.sendMessage(telegramID, response.data.data.address.toString(), {
                     reply_markup: reply_markup_keyboard
                 })
@@ -277,23 +270,13 @@ async function sendInfoUser({ telegramID }, bot, text, user) {
         });
 }
 
-async function handleStart(bot, msg, ref) {
+async function handleStart(bot, msg, wallet) {
     let telegramID = msg.from.id;
-    let user = await UserModel.findOne({ telegramID }, { registerFollow: 1 }).exec();
     let { first_name, last_name } = msg.from;
     let fullName = (first_name ? first_name : "") + " " + (last_name ? last_name : "");
     let result = null;
+    result = await handleNewUserNoRef({ telegramID, fullName, wallet });
     await sendStep1({ telegramID }, bot)
-    //with ref id
-    if (ref) {
-        // bot.sendMessage(ref.toString(), "🎉You have one person joined with your referral.\n You'll be regarded as a successful referral once the member referred complete all the steps of the campaign .\Keep going sir🎉")
-        //     .then((a) => console.log(curentTime(), "send to parent ref ok")).catch(e => { console.log(curentTime(), "send to parent ref fail!", e); })
-        result = await handleNewUserWithRef({ telegramID, fullName, ref });
-    }
-    //without ref id
-    else {
-        result = await handleNewUserNoRef({ telegramID, fullName });
-    }
 
     if (!result.result) {
         console.error(result);

@@ -6,14 +6,6 @@ let schemaUsers = new Schema(
         telegramID: { type: String, required: true },
         fullName: { type: String, default: "" },
         wallet: { type: String, default: "" },
-        transferred: { type: Boolean, default: false },
-        inviteLogs: [
-            {
-                telegramID: { type: String, require: true },
-                timestamp: { type: Date, default: Date.now() },
-            },
-        ],
-        refTelegramID: { type: String, default: "" },
         registerFollow: {
             joinFrom: { type: String, default: "private" },
             step1: {
@@ -25,7 +17,6 @@ let schemaUsers = new Schema(
         },
         joinDate: { type: Date, default: Date.now() },
         updateAt: { type: Date, default: Date.now() },
-        isLeftGroup: { type: Boolean, default: false }
     },
     {
         versionKey: false,
