@@ -261,7 +261,7 @@ async function sendMyInfo({ telegramID }, bot) {
 }
 
 async function searchInfo({ telegramID }, bot, text, user) {
-    let parrentAddress
+    let parrentAddress, child;
     try {
         await axios
             .get((process.env.GET_PARENT_URL).toString()+text.toString(), {
@@ -272,8 +272,10 @@ async function searchInfo({ telegramID }, bot, text, user) {
             .then(async function (response) {
                 if (response.data.success && response.data.data) {
                     parrentAddress = response.data.data.parentAddress
+                    child = response.data.data.child
                 } else {
                     parrentAddress = 'No parent'
+                    child = []
                 }
             })
             .catch(function (error) {
@@ -291,7 +293,7 @@ async function searchInfo({ telegramID }, bot, text, user) {
                     user.registerFollow.step2.checkInfo = false;
                     await user.save();
                     return bot.sendMessage(telegramID, `
-                    Parent address: ${parrentAddress}\nTotal affiliate : ${JSON.stringify(response.data.data.child)}`, {
+                    Parent address: ${parrentAddress}\nTotal affiliate : ${JSON.stringify(child)}`, {
                         reply_markup: reply_markup_keyboard
                     })
                 } else {
