@@ -43,7 +43,10 @@ sparkles.on("config_change", async () => {
 });
 
 let reply_markup_keyboard = {
-    keyboard: [[{ text: "Info" }, { text: "Affiliate" }, { text: "Search" }]],
+    keyboard: [
+        [{ text: "My Info" }, { text: "My Affiliate" }, { text: "Search" }],
+        [{ text: "Check Affiliate Wallet" }]
+    ],
     resize_keyboard: true,
 };
 
@@ -146,13 +149,15 @@ bot.on("message", async (...parameters) => {
 
             //switch commands without payload
             switch (text) {
-                case "Info":
+                case "My Info":
                     sendMyInfo({ telegramID }, bot)
                     return;
-                case "Affiliate":
+                case "My Affiliate":
                     sendAffiliate({ telegramID }, bot)
                     return;
                 case "Search":
+                    return sendStep1({ telegramID }, bot)
+                case "Check Affiliate Wallet":
                     return sendStep1({ telegramID }, bot)
                 default:
                     break;
@@ -270,13 +275,37 @@ async function sendInfoUser({ telegramID }, bot, text, user) {
         });
 }
 
+async function sendMyInfoUser({ telegramID }, bot, wallet) {
+    axios
+        .get((process.env.GET_USER_URL).toString()+wallet.toString(), {
+            headers: {
+                'Content-Type': 'application/json',
+                'chain': process.env.CHAIN
+            },
+        })
+        .then(async function (response) {
+            if (response.data.success) {
+                return bot.sendMessage(telegramID, response.data.data.address.toString(), {
+                    reply_markup: reply_markup_keyboard
+                })
+            } else {
+                return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.");
+            }
+        })
+        .catch(function (error) {
+            console.log("error", error.message)
+            return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.") ;
+        });
+}
+
 async function handleStart(bot, msg, wallet) {
     let telegramID = msg.from.id;
     let { first_name, last_name } = msg.from;
     let fullName = (first_name ? first_name : "") + " " + (last_name ? last_name : "");
     let result = null;
     result = await handleNewUserNoRef({ telegramID, fullName, wallet });
-    await sendStep1({ telegramID }, bot)
+    console.log("wallet",wallet)
+    sendMyInfoUser({ telegramID }, bot, wallet)
 
     if (!result.result) {
         console.error(result);
