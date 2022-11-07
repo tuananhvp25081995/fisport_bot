@@ -4,9 +4,9 @@ let moment = require("moment");
 let mongoose = require("mongoose")
 let DashboardModel = mongoose.model("DashboardModel")
 let UserModel = mongoose.model("UserModel")
+let WAValidator = require('wallet-address-validator');
 let sparkles = require("sparkles")();
 const chalk = require("chalk");
-const { PublicKey } = require('@solana/web3.js');
 const axios = require("axios").default;
 
 let {
@@ -44,8 +44,8 @@ sparkles.on("config_change", async () => {
 
 let reply_markup_keyboard = {
     keyboard: [
-        [{ text: "My Info" }, { text: "My Affiliate" }, { text: "Search" }],
-        [{ text: "Check Affiliate Wallet" }]
+        [{ text: "My Parent" }, { text: "My Affiliate" }],
+        [{ text: "Check Info Wallet" }]
     ],
     resize_keyboard: true,
 };
@@ -75,16 +75,6 @@ async function logMsg(msg, type = "text") {
     }
     else if (type === "left_chat_member") {
     } else {
-    }
-}
-
-function Valication(address) {
-    try {
-        const publicKeyInUint8 = new PublicKey(address).toBytes();
-        let  isSolana =  PublicKey.isOnCurve(publicKeyInUint8)
-        return isSolana
-    } catch (error) {
-        return false
     }
 }
 
@@ -137,7 +127,6 @@ bot.on("message", async (...parameters) => {
                 }
             }
             
-
             if (!user) {
                 return bot.sendMessage(telegramID,
                     "Have an error when handle your request.\nPlease click start to start again.", {
@@ -149,32 +138,33 @@ bot.on("message", async (...parameters) => {
 
             //switch commands without payload
             switch (text) {
-                case "My Info":
-                    sendMyInfo({ telegramID }, bot)
+                case "My Parent":
+                    sendMyInfo({ telegramID }, bot,user)
                     return;
                 case "My Affiliate":
                     sendAffiliate({ telegramID }, bot)
                     return;
-                case "Search":
-                    return sendStep1({ telegramID }, bot)
-                case "Check Affiliate Wallet":
+                case "Check Info Wallet":
                     return sendStep1({ telegramID }, bot)
                 default:
                     break;
             }
 
             if (user.registerFollow.step2.checkInfo) {
-                if (Valication(msg.text)) {
-                    sendInfoUser({ telegramID }, bot, msg.text, user)
+                let valid = WAValidator.validate(msg.text, 'ETH');
+                if (valid) {
+                    return searchInfo({ telegramID }, bot, msg.text, user)
                 } else {
-                    bot.sendMessage(telegramID,
+                    return bot.sendMessage(telegramID,
                         "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.",
                         { disable_web_page_preview: true }
                     );
                 }
-            } else {
-                await sendStep1({ telegramID }, bot)
             }
+            
+            return bot.sendMessage(telegramID, "Wrong syntax, please choose again", {
+                reply_markup: reply_markup_keyboard
+            })
         }
     }
 });
@@ -199,103 +189,148 @@ async function sendStep1({ telegramID }, bot) {
 async function sendAffiliate({ telegramID }, bot) {
     let user = await UserModel.findOne({ telegramID }).exec();
     if (user) {
-        let wallet = user.wallet.toString()
-        console.log(wallet)
-        axios
-            .get((process.env.GET_USER_URL).toString()+wallet, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'chain': process.env.CHAIN
-                },
-            })
-            .then(async function (response) {
-                if (response.data.success) {
-                    return bot.sendMessage(telegramID, response.data.data.f1s.toString(), {
-                        reply_markup: reply_markup_keyboard
-                    })
-                } else {
-                    return bot.sendMessage(telegramID, "Oops!!!\nUser does not exist");
-                }
-            })
-            .catch(function (error) {
-                console.log("error", error.message)
-                return bot.sendMessage(telegramID, "Oops!!!\nUser does not exist") ;
-            });
+        try {
+            let wallet = user.wallet.toString()
+            axios
+                .get((process.env.GET_USER_URL).toString()+wallet, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(async function (response) {
+                    if (response.data.success) {
+                        user.registerFollow.step2.checkInfo = false;
+                        await user.save();
+                        return bot.sendMessage(telegramID, `Total affiliate: ${JSON.stringify(response.data.data.child)}`, {
+                            reply_markup: reply_markup_keyboard
+                        })
+                    } else {
+                        return bot.sendMessage(telegramID, "Oops!!!\nUser does not exist");
+                    }
+                })
+                .catch(function (error) {
+                    console.log("error", error.message)
+                    return bot.sendMessage(telegramID, "Oops!!!\nUser does not exist") ;
+                });
+        } catch (err) {
+            console.error(err)
+        }
     }
 }
 
 async function sendMyInfo({ telegramID }, bot) {
     let user = await UserModel.findOne({ telegramID }).exec();
     if (user) {
-        let wallet = user.wallet.toString()
-        axios
-            .get((process.env.GET_USER_URL).toString()+wallet, {
+        try {
+            let parrentAddress;
+            let child;
+            let wallet = user.wallet.toString()
+            axios
+                .get((process.env.GET_PARENT_URL).toString()+wallet, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(async function (response) {
+                    if (response.data.success) {
+                        if (response.data.data) {
+                            parrentAddress = response.data.data.parentAddress
+                            child = response.data.data.child
+                        } else {
+                            parrentAddress = 'No parent'
+                            child = []
+                        }
+                        user.registerFollow.step2.checkInfo = false;
+                        await user.save();
+                        return bot.sendMessage(telegramID, `
+                        Parent address: ${parrentAddress}\nTotal Child : ${JSON.stringify(child)}`, {
+                            reply_markup: reply_markup_keyboard
+                        })
+                    } else {
+                        return bot.sendMessage(telegramID, "Oops!!!\nUser does not exist");
+                    }
+                })
+                .catch(function (error) {
+                    console.log("error", error.message)
+                    return bot.sendMessage(telegramID, "Oops!!!\nUser does not exist") ;
+                });
+        } catch (err) {
+            console.error(err)
+        }
+    }
+}
+
+async function searchInfo({ telegramID }, bot, text, user) {
+    let parrentAddress
+    try {
+        await axios
+            .get((process.env.GET_PARENT_URL).toString()+text.toString(), {
                 headers: {
                     'Content-Type': 'application/json',
-                    'chain': process.env.CHAIN
                 },
             })
             .then(async function (response) {
-                if (response.data.success) {
-                    return bot.sendMessage(telegramID, `${response.data.data.address.toString()}`, {
-                        reply_markup: reply_markup_keyboard
-                    })
+                if (response.data.success && response.data.data) {
+                    parrentAddress = response.data.data.parentAddress
                 } else {
-                    return bot.sendMessage(telegramID, "Oops!!!\nUser does not exist");
+                    parrentAddress = 'No parent'
                 }
             })
             .catch(function (error) {
                 console.log("error", error.message)
-                return bot.sendMessage(telegramID, "Oops!!!\nUser does not exist") ;
             });
+
+        axios
+            .get((process.env.GET_USER_URL).toString()+text.toString(), {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(async function (response) {
+                if (response.data.success) {
+                    user.registerFollow.step2.checkInfo = false;
+                    await user.save();
+                    return bot.sendMessage(telegramID, `
+                    Parent address: ${parrentAddress}\nTotal affiliate : ${JSON.stringify(response.data.data.child)}`, {
+                        reply_markup: reply_markup_keyboard
+                    })
+                } else {
+                    return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.");
+                }
+            })
+            .catch(function (error) {
+                console.log("error", error.message)
+                return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.") ;
+            });
+    } catch (err) {
+        console.error(err)
     }
 }
 
-async function sendInfoUser({ telegramID }, bot, text, user) {
-    axios
-        .get((process.env.GET_USER_URL).toString()+text.toString(), {
-            headers: {
-                'Content-Type': 'application/json',
-                'chain': process.env.CHAIN
-            },
-        })
-        .then(async function (response) {
-            if (response.data.success) {
-                user.registerFollow.step2.checkInfo = false;
-                return bot.sendMessage(telegramID, response.data.data.address.toString(), {
-                    reply_markup: reply_markup_keyboard
-                })
-            } else {
-                return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.");
-            }
-        })
-        .catch(function (error) {
-            console.log("error", error.message)
-            return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.") ;
-        });
-}
-
 async function sendMyInfoUser({ telegramID }, bot, wallet) {
-    axios
-        .get((process.env.GET_USER_URL).toString()+wallet.toString(), {
-            headers: {
-                'Content-Type': 'application/json',
-                'chain': process.env.CHAIN
-            },
-        })
-        .then(async function (response) {
-            if (response.data.success) {
-                return bot.sendMessage(telegramID, response.data.data.address.toString(), {
-                    reply_markup: reply_markup_keyboard
-                })
-            } else {
-                return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.");
-            }
-        })
-        .catch(function (error) {
-            console.log("error", error.message)
-            return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.") ;
-        });
+    try {
+        axios
+            .get((process.env.GET_USER_URL).toString()+wallet.toString(), {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(async function (response) {    
+                if (response.data.success) {
+                    return bot.sendMessage(telegramID, `Total affiliate: ${JSON.stringify(response.data.data.child)}`, {
+                        reply_markup: reply_markup_keyboard
+                    })
+                } else {
+                    return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.");
+                }
+            })
+            .catch(function (error) {
+                console.log("error", error.message)
+                return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.") ;
+            });
+    } catch (err) {
+        console.error(err)
+    }
 }
 
 async function handleStart(bot, msg, wallet) {
@@ -304,11 +339,14 @@ async function handleStart(bot, msg, wallet) {
     let fullName = (first_name ? first_name : "") + " " + (last_name ? last_name : "");
     let result = null;
     result = await handleNewUserNoRef({ telegramID, fullName, wallet });
-    console.log("wallet",wallet)
     sendMyInfoUser({ telegramID }, bot, wallet)
 
     if (!result.result) {
         console.error(result);
         return;
     }
+}
+
+module.exports = {
+    bot
 }

@@ -37,7 +37,7 @@
         "jade": "~1.11.0",
         "joi": "^17.2.1",
         "mailgun-js": "^0.22.0",
-        "moment": "^2.29.0",
+        "moment": "^2.29.4",
         "mongoose": "^5.10.5",
         "morgan": "~1.9.1",
         "node-telegram-bot-api": "^0.50.0",
