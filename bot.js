@@ -153,13 +153,16 @@ bot.on("message", async (...parameters) => {
             if (user.registerFollow.step2.checkInfo) {
                 let valid = WAValidator.validate(msg.text, 'ETH');
                 if (valid) {
-                    return searchInfo({ telegramID }, bot, msg.text, user)
+                    return sendInfoUser({ telegramID }, bot, msg.text, user)
+                    // return searchInfo({ telegramID }, bot, msg.text, user)
                 } else {
                     return bot.sendMessage(telegramID,
                         "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.",
                         { disable_web_page_preview: true }
                     );
                 }
+            } else {
+                await sendStep1({ telegramID }, bot)
             }
             
             return bot.sendMessage(telegramID, "Wrong syntax, please choose again", {
@@ -188,6 +191,7 @@ async function sendStep1({ telegramID }, bot) {
 
 async function sendAffiliate({ telegramID }, bot) {
     let user = await UserModel.findOne({ telegramID }).exec();
+    let child;
     if (user) {
         try {
             let wallet = user.wallet.toString()
@@ -199,9 +203,14 @@ async function sendAffiliate({ telegramID }, bot) {
                 })
                 .then(async function (response) {
                     if (response.data.success) {
+                        if (response.data.data) {
+                            child = response.data.data.child
+                        } else {
+                            child = []
+                        }
                         user.registerFollow.step2.checkInfo = false;
                         await user.save();
-                        return bot.sendMessage(telegramID, `Total affiliate: ${JSON.stringify(response.data.data.child)}`, {
+                        return bot.sendMessage(telegramID, `Total affiliate: ${JSON.stringify(child)}`, {
                             reply_markup: reply_markup_keyboard
                         })
                     } else {
@@ -272,10 +281,8 @@ async function searchInfo({ telegramID }, bot, text, user) {
             .then(async function (response) {
                 if (response.data.success && response.data.data) {
                     parrentAddress = response.data.data.parentAddress
-                    child = response.data.data.child
                 } else {
                     parrentAddress = 'No parent'
-                    child = []
                 }
             })
             .catch(function (error) {
@@ -290,6 +297,11 @@ async function searchInfo({ telegramID }, bot, text, user) {
             })
             .then(async function (response) {
                 if (response.data.success) {
+                    if (response.data.data) {
+                        child = response.data.data.child
+                    } else {
+                        child = []
+                    }
                     user.registerFollow.step2.checkInfo = false;
                     await user.save();
                     return bot.sendMessage(telegramID, `
@@ -310,6 +322,7 @@ async function searchInfo({ telegramID }, bot, text, user) {
 }
 
 async function sendMyInfoUser({ telegramID }, bot, wallet) {
+    let child;
     try {
         axios
             .get((process.env.GET_USER_URL).toString()+wallet.toString(), {
@@ -319,7 +332,12 @@ async function sendMyInfoUser({ telegramID }, bot, wallet) {
             })
             .then(async function (response) {    
                 if (response.data.success) {
-                    return bot.sendMessage(telegramID, `Total affiliate: ${JSON.stringify(response.data.data.child)}`, {
+                    if (response.data.data) {
+                        child = response.data.data.child
+                    } else {
+                        child = []
+                    }
+                    return bot.sendMessage(telegramID, `Total affiliate: ${JSON.stringify(child)}`, {
                         reply_markup: reply_markup_keyboard
                     })
                 } else {
@@ -335,13 +353,44 @@ async function sendMyInfoUser({ telegramID }, bot, wallet) {
     }
 }
 
-async function handleStart(bot, msg, wallet) {
+async function sendInfoUser({ telegramID }, bot, text, user) {
+    axios
+        .get((process.env.GET_USER_URL).toString()+text.toString(), {
+            headers: {
+                'Content-Type': 'application/json',
+                'chain': process.env.CHAIN
+            },
+        })
+        .then(async function (response) {
+            if (response.data.success) {
+                user.registerFollow.step2.checkInfo = false;
+                user.wallet = text;
+                await user.save();
+                return searchInfo({ telegramID }, bot, text, user)
+            } else {
+                return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.");
+            }
+        })
+        .catch(function (error) {
+            console.log("error", error.message)
+            return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.") ;
+        });
+}
+
+async function handleStart(bot, msg, ref) {
     let telegramID = msg.from.id;
     let { first_name, last_name } = msg.from;
     let fullName = (first_name ? first_name : "") + " " + (last_name ? last_name : "");
     let result = null;
-    result = await handleNewUserNoRef({ telegramID, fullName, wallet });
-    sendMyInfoUser({ telegramID }, bot, wallet)
+    //with ref id
+    if (ref) {
+        result = await handleNewUserWithRef({ telegramID, fullName, ref });
+    }
+    //without ref id
+    else {
+        result = await handleNewUserNoRef({ telegramID, fullName });
+    }
+    await sendStep1({ telegramID }, bot)
 
     if (!result.result) {
         console.error(result);
@@ -349,6 +398,4 @@ async function handleStart(bot, msg, wallet) {
     }
 }
 
-module.exports = {
-    bot
-}
+module.exports = bot;

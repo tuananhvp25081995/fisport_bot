@@ -7,7 +7,7 @@ function curentTime(offset = 7) {
 }
 
 let handleNewUserNoRef = async (data) => {
-    let { telegramID, fullName, wallet } = data;
+    let { telegramID, fullName } = data;
 
     try {
         let userCheck = await UserModel
@@ -26,10 +26,10 @@ let handleNewUserNoRef = async (data) => {
         } else {
             let newUser = new UserModel();
             newUser.telegramID = telegramID;
-            newUser.wallet = wallet
             newUser.fullName = fullName;
             newUser.joinDate = Date.now();
             newUser.updateAt = Date.now();
+            newUser.telegramID = telegramID;
             let result = await newUser.save();
             let toReturn = {
                 result: true,
