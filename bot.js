@@ -208,9 +208,13 @@ async function sendAffiliate({ telegramID }, bot) {
                         } else {
                             child = []
                         }
+                        let newChild = ''
+                        child.forEach((item) => {
+                            newChild =newChild+"\n"+`${item}`
+                        })
                         user.registerFollow.step2.checkInfo = false;
                         await user.save();
-                        return bot.sendMessage(telegramID, `Total affiliate: ${JSON.stringify(child)}`, {
+                        return bot.sendMessage(telegramID, `List affiliate: ${newChild}\nTotal : ${child.length}`, {
                             reply_markup: reply_markup_keyboard
                         })
                     } else {
@@ -249,10 +253,14 @@ async function sendMyInfo({ telegramID }, bot) {
                             parrentAddress = 'No parent'
                             child = []
                         }
+                        let newChild = ''
+                        child.forEach((item) => {
+                            newChild =newChild+"\n"+`${item}`
+                        })
                         user.registerFollow.step2.checkInfo = false;
                         await user.save();
                         return bot.sendMessage(telegramID, `
-                        Parent address: ${parrentAddress}\nTotal Child : ${JSON.stringify(child)}`, {
+                        Parent address: ${parrentAddress}\nList child : ${newChild}\nTotal : ${child.length}`, {
                             reply_markup: reply_markup_keyboard
                         })
                     } else {
@@ -302,10 +310,14 @@ async function searchInfo({ telegramID }, bot, text, user) {
                     } else {
                         child = []
                     }
+                    let newChild = ''
+                    child.forEach((item) => {
+                        newChild =newChild+"\n"+`${item}`
+                    })
                     user.registerFollow.step2.checkInfo = false;
                     await user.save();
                     return bot.sendMessage(telegramID, `
-                    Parent address: ${parrentAddress}\nTotal affiliate : ${JSON.stringify(child)}`, {
+                    Parent address: ${parrentAddress}\nList affiliate : ${newChild}\nTotal : ${child.length}`, {
                         reply_markup: reply_markup_keyboard
                     })
                 } else {
