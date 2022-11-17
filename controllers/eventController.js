@@ -4,12 +4,15 @@ const BigNumber = require('bignumber.js')
 const moment = require("moment")
 const contract_address = process.env.CONTRACT_ADDRESS
 const contract_factory_addres = process.env.FACTORY_CONTRACT_ADDRESS
+const contract_marketer_addres = process.env.MARKETER_CONTRACT_ADDRESS
 const { Contract, providers } =  require('ethers');
 const abiRouter = require('../config/router-abi.json')
 const abiFactory = require('../config/factory-abi.json')
+const abiMarketer = require('../config/marketer-abi.json')
 const provider = new providers.JsonRpcProvider(process.env.PROVIDER_URL);
 const contractRouter = new Contract(contract_address, abiRouter, provider);
 const contractFactory = new Contract(contract_factory_addres, abiFactory, provider);
+const contractMarketer = new Contract(contract_marketer_addres, abiMarketer, provider);
 const bot = require('../bot')
 
 contractRouter.on('SWAP', async (who, season, team, i, o, buy, timestamp) => {
@@ -89,3 +92,5 @@ contractFactory.on('TransferBatch', async (operator, from, to, ids, values) => {
         this.logger.error(error);
     }
 })
+
+module.exports = contractMarketer;
