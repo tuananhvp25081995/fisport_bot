@@ -18,60 +18,76 @@ let {
 let bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true, });
 
 bot.on('callback_query', async function onCallbackQuery(callbackQuery) {
-    console.log(callbackQuery)
+    const allAction = callbackQuery.message.reply_markup.inline_keyboard
+    const telegramID = callbackQuery.message.chat.id
+    let user = await UserModel.findOne({ telegramID }, { registerFollow: 1}).exec();
+    let text = ''
+    allAction.forEach(item => {
+        if (callbackQuery.data == item[0].callback_data) {
+            text = item[0].text
+        }
+    })
     let parrentAddress, child;
-    // try {
-    //     await axios
-    //         .get((process.env.GET_PARENT_URL).toString()+text.toString(), {
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //             },
-    //         })
-    //         .then(async function (response) {
-    //             if (response.data.success && response.data.data) {
-    //                 parrentAddress = response.data.data.parentAddress
-    //             } else {
-    //                 parrentAddress = 'No parent'
-    //             }
-    //         })
-    //         .catch(function (error) {
-    //             console.log("error", error.message)
-    //         });
+    try {
+        await axios
+            .get((process.env.GET_PARENT_URL).toString()+text.toString(), {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(async function (response) {
+                if (response.data.success && response.data.data) {
+                    parrentAddress = response.data.data.parentAddress
+                } else {
+                    parrentAddress = 'No parent'
+                }
+            })
+            .catch(function (error) {
+                console.log("error", error.message)
+            });
 
-    //     axios
-    //         .get((process.env.GET_USER_URL).toString()+text.toString(), {
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //             },
-    //         })
-    //         .then(async function (response) {
-    //             if (response.data.success) {
-    //                 if (response.data.data) {
-    //                     child = response.data.data.child
-    //                 } else {
-    //                     child = []
-    //                 }
-    //                 let newChild = ''
-    //                 child.forEach((item) => {
-    //                     newChild =newChild+"\n"+`${item}`
-    //                 })
-    //                 user.registerFollow.step2.checkInfo = false;
-    //                 await user.save();
-    //                 return bot.sendMessage(telegramID, `
-    //                 Parent address: ${parrentAddress}\nList affiliate : ${newChild}\nTotal : ${child.length}`, {
-    //                     reply_markup: reply_markup_keyboard
-    //                 })
-    //             } else {
-    //                 return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.");
-    //             }
-    //         })
-    //         .catch(function (error) {
-    //             console.log("error", error.message)
-    //             return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.") ;
-    //         });
-    // } catch (err) {
-    //     console.error(err)
-    // }
+        axios
+            .get((process.env.GET_USER_URL).toString()+text.toString(), {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(async function (response) {
+                if (response.data.success) {
+                    if (response.data.data) {
+                        child = response.data.data.child
+                    } else {
+                        child = []
+                    }
+                    let arr = []
+                    child.forEach((item, index) => {
+                        const arr1 = [{}]
+                        arr1[0].text = item.toString()
+                        arr1[0].callback_data = index.toString()
+                        arr.push(arr1)
+                    })
+                    let options = {
+                        reply_markup: JSON.stringify({
+                          inline_keyboard: arr
+                        })
+                    };
+                    user.registerFollow.step2.checkInfo = false;
+                    await user.save();
+                    return bot.sendMessage(telegramID, `
+                    Parent address: ${parrentAddress}\nAddress search: ${text.toString()}\nTotal: ${child.length}\nList affiliate: `, options, {
+                        reply_markup: reply_markup_keyboard
+                    })
+                } else {
+                    return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.");
+                }
+            })
+            .catch(function (error) {
+                console.log("error", error.message)
+                return bot.sendMessage(telegramID, "Oops!!!\nYou have entered an invalid wallet address or wallet does not exist in the system. Press submit wallet address again.") ;
+            });
+    } catch (err) {
+        console.error(err)
+    }
 })
 
 let isPause = false,
@@ -147,7 +163,6 @@ let limit = {}
 bot.on("message", async (...parameters) => {
     let msg = parameters[0];
     let type = parameters[1].type;
-    let chatId = msg.chat.id;
     let telegramID = msg.from.id;
     let { first_name, last_name } = msg.from;
     let fullName = (first_name ? first_name : "") + " " + (last_name ? last_name : "");
@@ -169,7 +184,7 @@ bot.on("message", async (...parameters) => {
     //this is text message
     if (type === "text") {
         if (msg.chat.type === "private") {
-            let user = await UserModel.findOne({ telegramID }, { mail:1, registerFollow: 1, social: 1, wallet: 1 }).exec();
+            let user = await UserModel.findOne({ telegramID }, { registerFollow: 1, wallet: 1 }).exec();
             if (Date.now() > timeEnd) {
                 bot.sendMessage(telegramID, BOT_EVENT_END, {reply_markup: reply_markup_keyboard_end}).catch(e => { console.log(e) })
                 return;
@@ -293,8 +308,7 @@ async function sendAffiliate({ telegramID }, bot) {
 
                         user.registerFollow.step2.checkInfo = false;
                         await user.save();
-                        await bot.sendMessage(telegramID, `List affiliate: `, options)
-                        return bot.sendMessage(telegramID, `Total : ${child.length}\nTotal volume : ${volume}`, {
+                        return bot.sendMessage(telegramID, `Total: ${child.length}\nTotal volume: ${volume}\nList affiliate: `, options, {
                             reply_markup: reply_markup_keyboard
                         })
                     } else {
@@ -348,8 +362,7 @@ async function sendMyInfo({ telegramID }, bot) {
                         };
                         user.registerFollow.step2.checkInfo = false;
                         await user.save();
-                        await bot.sendMessage(telegramID, `Parent address: ${parrentAddress}\nList child : `, options)
-                        return bot.sendMessage(telegramID, `Total : ${child.length}`, {
+                        return bot.sendMessage(telegramID, `Parent address: ${parrentAddress}\nTotal: ${child.length}\nList child: `, options, {
                             reply_markup: reply_markup_keyboard
                         })
                     } else {
@@ -399,14 +412,22 @@ async function searchInfo({ telegramID }, bot, text, user) {
                     } else {
                         child = []
                     }
-                    let newChild = ''
-                    child.forEach((item) => {
-                        newChild =newChild+"\n"+`${item}`
+                    let arr = []
+                    child.forEach((item, index) => {
+                        const arr1 = [{}]
+                        arr1[0].text = item.toString()
+                        arr1[0].callback_data = index.toString()
+                        arr.push(arr1)
                     })
+                    let options = {
+                        reply_markup: JSON.stringify({
+                          inline_keyboard: arr
+                        })
+                    };
                     user.registerFollow.step2.checkInfo = false;
                     await user.save();
                     return bot.sendMessage(telegramID, `
-                    Parent address: ${parrentAddress}\nList affiliate : ${newChild}\nTotal : ${child.length}`, {
+                    Parent address: ${parrentAddress}\nAddress search: ${text.toString()}\nTotal: ${child.length}\nList affiliate: `, options, {
                         reply_markup: reply_markup_keyboard
                     })
                 } else {
@@ -444,7 +465,7 @@ async function sendMyInfoUser({ telegramID }, bot, user) {
             .then(async function (response) {    
                 if (response.data.success) {
                     let totalChild = response.data.data.child.length
-                    return bot.sendMessage(telegramID,`Total affiliate : ${totalChild}\nMy volume : ${selfVol}\nTotal volume affiliate : ${volume}`, {
+                    return bot.sendMessage(telegramID,`My address: ${wallet}\nTotal affiliate: ${totalChild}\nMy volume: ${selfVol}\nTotal volume affiliate: ${volume}`, {
                         reply_markup: reply_markup_keyboard
                     })
                 } else {
